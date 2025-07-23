@@ -1,6 +1,11 @@
-import { HtmlHTMLAttributes, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import type { Schema } from "../amplify/data/resource";
 import { generateClient } from "aws-amplify/data";
+import { onNewEmail } from "./graphql/subscriptions";
+import { SendEmailInput } from "./API";
+import { sendEmail } from "./graphql/mutations";
+import MediaThemeTailwindAudio from 'player.style/tailwind-audio/react';
+import type { Email } from "./API";
 
 const client = generateClient<Schema>();
 
@@ -85,9 +90,9 @@ const managementList = [
         />
         <path
           fill="currentColor"
-          fill-rule="evenodd"
+          fillRule="evenodd"
           d="m20.069 8.5l.431-.002V13c0 3.771 0 5.657-1.172 6.828S16.271 21 12.5 21h-1c-3.771 0-5.657 0-6.828-1.172S3.5 16.771 3.5 13V8.498l.431.002zM9 12c0-.466 0-.699.076-.883a1 1 0 0 1 .541-.541c.184-.076.417-.076.883-.076h3c.466 0 .699 0 .883.076a1 1 0 0 1 .54.541c.077.184.077.417.077.883s0 .699-.076.883a1 1 0 0 1-.541.54c-.184.077-.417.077-.883.077h-3c-.466 0-.699 0-.883-.076a1 1 0 0 1-.54-.541C9 12.699 9 12.466 9 12"
-          clip-rule="evenodd"
+          clipRule="evenodd"
         />
       </svg>
     ),
@@ -103,9 +108,9 @@ const managementList = [
       >
         <path
           fill="currentColor"
-          fill-rule="evenodd"
+          fillRule="evenodd"
           d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12s4.477 10 10 10s10-4.477 10-10M12 6.25a.75.75 0 0 1 .75.75v6a.75.75 0 0 1-1.5 0V7a.75.75 0 0 1 .75-.75M12 17a1 1 0 1 0 0-2a1 1 0 0 0 0 2"
-          clip-rule="evenodd"
+          clipRule="evenodd"
         />
       </svg>
     ),
@@ -121,7 +126,7 @@ const managementList = [
       >
         <path
           fill="currentColor"
-          fill-rule="evenodd"
+          fillRule="evenodd"
           d="m6.774 6.4l.812 13.648a.8.8 0 0 0 .798.752h7.232a.8.8 0 0 0 .798-.752L17.226 6.4zm11.655 0l-.817 13.719A2 2 0 0 1 15.616 22H8.384a2 2 0 0 1-1.996-1.881L5.571 6.4H3.5v-.7a.5.5 0 0 1 .5-.5h16a.5.5 0 0 1 .5.5v.7zM14 3a.5.5 0 0 1 .5.5v.7h-5v-.7A.5.5 0 0 1 10 3zM9.5 9h1.2l.5 9H10zm3.8 0h1.2l-.5 9h-1.2z"
         />
       </svg>
@@ -274,9 +279,9 @@ const categoryList2 = [
         />
         <path
           fill="currentColor"
-          fill-rule="evenodd"
+          fillRule="evenodd"
           d="m20.069 8.5l.431-.002V13c0 3.771 0 5.657-1.172 6.828S16.271 21 12.5 21h-1c-3.771 0-5.657 0-6.828-1.172S3.5 16.771 3.5 13V8.498l.431.002zM9 12c0-.466 0-.699.076-.883a1 1 0 0 1 .541-.541c.184-.076.417-.076.883-.076h3c.466 0 .699 0 .883.076a1 1 0 0 1 .54.541c.077.184.077.417.077.883s0 .699-.076.883a1 1 0 0 1-.541.54c-.184.077-.417.077-.883.077h-3c-.466 0-.699 0-.883-.076a1 1 0 0 1-.54-.541C9 12.699 9 12.466 9 12"
-          clip-rule="evenodd"
+          clipRule="evenodd"
         />
       </svg>
     ),
@@ -307,7 +312,7 @@ const categoryList2 = [
       >
         <path
           fill="currentColor"
-          fill-rule="evenodd"
+          fillRule="evenodd"
           d="m6.774 6.4l.812 13.648a.8.8 0 0 0 .798.752h7.232a.8.8 0 0 0 .798-.752L17.226 6.4zm11.655 0l-.817 13.719A2 2 0 0 1 15.616 22H8.384a2 2 0 0 1-1.996-1.881L5.571 6.4H3.5v-.7a.5.5 0 0 1 .5-.5h16a.5.5 0 0 1 .5.5v.7zM14 3a.5.5 0 0 1 .5.5v.7h-5v-.7A.5.5 0 0 1 10 3zM9.5 9h1.2l.5 9H10zm3.8 0h1.2l-.5 9h-1.2z"
         />
       </svg>
@@ -491,8 +496,104 @@ interface ListUser {
   messageCount: number;
 }
 
+const listEmails = `
+query ListEmails($emailId: String!) {
+  listEmails(emailId: $emailId) {
+    nextToken
+    items {
+      aiInsights {
+        summary
+        summaryAudioUrl
+        sentiment
+        links
+        keyDates
+        is_urgent
+        entities
+        category
+        amounts
+        action_items
+      }
+      attachments {
+        filename
+        s3_key
+      }
+      date
+      direction
+      entity
+      from
+      fromName
+      htmlBody
+      messageId
+      plainBody
+      subject
+      to
+      userId
+    }
+  }
+}
+`;
+
+interface EmailModalProps {
+  onClose: () => void;
+  onSend: (emailData: { to: string; subject: string; message: string }) => void;
+}
+
+function EmailModal({ onClose, onSend }: EmailModalProps) {
+  const [to, setTo] = useState("");
+  const [subject, setSubject] = useState("");
+  const [message, setMessage] = useState("");
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSend({ to, subject, message });
+    onClose(); // close after send
+  };
+
+  return (
+    <div className="fixed bottom-4 right-4 w-[400px] bg-zinc-900 shadow-lg rounded-lg border border-zinc-600 z-50">
+      <div className="flex justify-between items-center p-3 border-b text-zinc-600">
+        <h3 className="font-medium text-zinc-400">New Email</h3>
+        <button
+          onClick={onClose}
+          className="text-zinc-400 hover:cursor-pointer"
+        >
+          &times;
+        </button>
+      </div>
+      <form onSubmit={handleSubmit} className="p-4 space-y-3">
+        <input
+          type="email"
+          placeholder="To"
+          className="w-full border text-zinc-400 outline-0 border-zinc-600 px-3 py-2 rounded"
+          value={to}
+          onChange={(e) => setTo(e.target.value)}
+          required
+        />
+        <input
+          type="text"
+          placeholder="Subject"
+          className="w-full border text-zinc-400 outline-0 border-zinc-600 px-3 py-2 rounded"
+          value={subject}
+          onChange={(e) => setSubject(e.target.value)}
+        />
+        <textarea
+          placeholder="Message"
+          className="w-full border text-zinc-400 outline-0 border-zinc-600 px-3 py-2 rounded h-32 resize-none"
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+        />
+        <button
+          type="submit"
+          className="bg-blue-600 w-full text-white px-4 py-2 rounded hover:bg-blue-500"
+        >
+          Send
+        </button>
+      </form>
+    </div>
+  );
+}
+
 function App() {
-  // const [todos, setTodos] = useState<Array<Schema["Todo"]["type"]>>([]);
   const [leftMenuChip, setLeftMenuChip] = useState<string>("B");
   const [selected, setSelected] = useState<string>("Inbox");
   const [selectedCat, setSelectedCat] = useState<string>("Primary");
@@ -505,844 +606,952 @@ function App() {
   const [categories] = useState<ListCats[]>(categoryList);
   const [pinned] = useState<ListUser[]>(pinnedList);
   const [primary] = useState<ListUser[]>(primaryList);
+  const [showModal, setShowModal] = useState(false);
+  const [emails, setEmails] = useState<Email[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // useEffect(() => {
-  //   client.models.Todo.observeQuery().subscribe({
-  //     next: (data) => setTodos([...data.items]),
-  //   });
-  // }, []);
+  const fetchEmails = async () => {
+    setLoading(true);
+    try {
+      const result = await client.graphql({
+        query: listEmails,
+        variables: { emailId: "rosius@846agents.com" },
+      });
+      const items =
+        (result as { data?: { listEmails?: { items?: Email[] } } }).data
+          ?.listEmails?.items ?? [];
+      setEmails(items);
+    } catch (error) {
+      console.error("❌ Error fetching emails:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // function createTodo() {
-  //   client.models.Todo.create({ content: window.prompt("Todo content") });
-  // }
+  useEffect(() => {
+    fetchEmails();
+    client
+      .graphql({
+        query: onNewEmail,
+      })
+      .subscribe({
+        next: ({ data }) => {
+          console.log("data: ", data);
+        },
+        error: (error) => console.warn("==== errr", error),
+      });
+  }, []);
+
+  const handleSendEmail = async (input: SendEmailInput) => {
+    try {
+      const result = await client.graphql({
+        query: sendEmail,
+        variables: {
+          input,
+        },
+      });
+
+      return { success: result.data.sendEmail };
+    } catch (error) {
+      console.log("❌ Error sending email:", error);
+      return { success: false, error };
+    }
+  };
+
+  const handleModalSend = async ({
+    to,
+    subject,
+    message,
+  }: {
+    to: string;
+    subject: string;
+    message: string;
+  }) => {
+    const input: SendEmailInput = {
+      userId: "currentUserId",
+      from: "currentUserEmail",
+      to: [to],
+      subject,
+      plainBody: message,
+      htmlBody: `<p>${message}</p>`,
+    };
+
+    await handleSendEmail(input);
+  };
 
   return (
-    <main className="h-screen p-2 bg-zinc-950 text-gray-200 w-full flex gap-1.5 transition-all ease-in-out duration-700">
-      <div className="bg-zisnc-900 flex flex-col justify-between h-full min-w-80 p-2 overflow-y-auto hide-scrollbar">
-        <div className="w-full">
-          <div className="w-full flex justify-between">
-            <div className="flex items-center gap-2">
-              {["B", "A", "+"].map((item) => (
-                <div
-                  className={`relative rounded hover:cursor-pointer h-7 w-7 bg-zinc-900 flex justify-center items-center ${
-                    leftMenuChip === item && "border border-blue-500"
-                  }`}
-                  onClick={() => {
-                    if (item == "+") return;
-                    setLeftMenuChip(item);
-                  }}
-                >
-                  {item}
-                  {item === leftMenuChip && (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      className="absolute h-3.5 w-3.5 -bottom-2 -right-2 text-blue-500"
-                    >
-                      <path
-                        fill="currentColor"
-                        d="m10.6 13.8l-2.15-2.15q-.275-.275-.7-.275t-.7.275t-.275.7t.275.7L9.9 15.9q.3.3.7.3t.7-.3l5.65-5.65q.275-.275.275-.7t-.275-.7t-.7-.275t-.7.275zM12 22q-2.075 0-3.9-.788t-3.175-2.137T2.788 15.9T2 12t.788-3.9t2.137-3.175T8.1 2.788T12 2t3.9.788t3.175 2.137T21.213 8.1T22 12t-.788 3.9t-2.137 3.175t-3.175 2.138T12 22"
-                      />
-                    </svg>
-                  )}
-                </div>
-              ))}
-            </div>
-            <div className="hover:cursor-pointer">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                className="h-6"
-              >
-                <path
-                  fill="currentColor"
-                  d="M16 12a2 2 0 0 1 2-2a2 2 0 0 1 2 2a2 2 0 0 1-2 2a2 2 0 0 1-2-2m-6 0a2 2 0 0 1 2-2a2 2 0 0 1 2 2a2 2 0 0 1-2 2a2 2 0 0 1-2-2m-6 0a2 2 0 0 1 2-2a2 2 0 0 1 2 2a2 2 0 0 1-2 2a2 2 0 0 1-2-2"
-                />
-              </svg>
-            </div>
-          </div>
-          <div className="py-5">
-            <p>Baked Design</p>
-            <p className="font-light text-sm text-zinc-600">
-              work@baked.design
-            </p>
-          </div>
-          <div className="bg-zinc-900 rounded-lg flex justify-center h-10 hover:cursor-pointer">
-            <div className="inline-flex items-center gap-2 text-sm">
-              <span>
+    <>
+      <main className="h-screen p-2 bg-zinc-950 text-gray-200 w-full flex gap-1.5 transition-all ease-in-out duration-700">
+        <div className="bg-zisnc-900 flex flex-col justify-between h-full min-w-80 p-2 overflow-y-auto hide-scrollbar">
+          <div className="w-full">
+            <div className="w-full flex justify-between">
+              <div className="flex items-center gap-2">
+                {["B", "A", "+"].map((item) => (
+                  <div
+                    className={`relative rounded hover:cursor-pointer h-7 w-7 bg-zinc-900 flex justify-center items-center ${
+                      leftMenuChip === item && "border border-blue-500"
+                    }`}
+                    onClick={() => {
+                      if (item == "+") return;
+                      setLeftMenuChip(item);
+                    }}
+                  >
+                    {item}
+                    {item === leftMenuChip && (
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        className="absolute h-3.5 w-3.5 -bottom-2 -right-2 text-blue-500"
+                      >
+                        <path
+                          fill="currentColor"
+                          d="m10.6 13.8l-2.15-2.15q-.275-.275-.7-.275t-.7.275t-.275.7t.275.7L9.9 15.9q.3.3.7.3t.7-.3l5.65-5.65q.275-.275.275-.7t-.275-.7t-.7-.275t-.7.275zM12 22q-2.075 0-3.9-.788t-3.175-2.137T2.788 15.9T2 12t.788-3.9t2.137-3.175T8.1 2.788T12 2t3.9.788t3.175 2.137T21.213 8.1T22 12t-.788 3.9t-2.137 3.175t-3.175 2.138T12 22"
+                        />
+                      </svg>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div className="hover:cursor-pointer">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 24 24"
-                  className="h-5 text-zinc-600"
+                  className="h-6"
                 >
                   <path
                     fill="currentColor"
-                    d="M5 21q-.825 0-1.412-.587T3 19V5q0-.825.588-1.412T5 3h6.525q.5 0 .75.313t.25.687t-.262.688T11.5 5H5v14h14v-6.525q0-.5.313-.75t.687-.25t.688.25t.312.75V19q0 .825-.587 1.413T19 21zm4-7v-2.425q0-.4.15-.763t.425-.637l8.6-8.6q.3-.3.675-.45t.75-.15q.4 0 .763.15t.662.45L22.425 3q.275.3.425.663T23 4.4t-.137.738t-.438.662l-8.6 8.6q-.275.275-.637.438t-.763.162H10q-.425 0-.712-.288T9 14m12.025-9.6l-1.4-1.4zM11 13h1.4l5.8-5.8l-.7-.7l-.725-.7L11 11.575zm6.5-6.5l-.725-.7zl.7.7z"
-                  />
-                </svg>
-              </span>
-              New email
-            </div>
-          </div>
-          <div className="mt-6">
-            <p className="text-zinc-600 pl-2">Core</p>
-            <div className="w-full space-y-3 mt-3.5 text-sm">
-              {core.map((item) => (
-                <div
-                  className={`${
-                    selected === item.label && "bg-zinc-900"
-                  } flex justify-between hover:bg-zinc-900 items-center  p-2 rounded-md hover:cursor-pointer`}
-                  onClick={() => setSelected(item.label)}
-                >
-                  <div className="inline-flex items-center gap-2">
-                    <span
-                      className={`${
-                        selected !== item.label && "text-zinc-600"
-                      }`}
-                    >
-                      {item.icon}
-                    </span>
-                    {item.label}
-                  </div>
-                  <div
-                    className={`text-zinc-600 ${item.count == 0 && "hidden"}`}
-                  >
-                    {item.count}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="mt-6">
-            <div
-              className="inline-flex gap-2 hover:cursor-pointer items-center text-zinc-600"
-              onClick={() => setShowManag((prev) => !prev)}
-            >
-              <p className="pl-2">Management</p>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                className={`${
-                  !showManag && "rotate-180"
-                } h-5 transition-all ease-in-out duration-300`}
-              >
-                <path
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="m6 15l6-6l6 6"
-                />
-              </svg>
-            </div>
-            <div
-              className={`w-full space-y-3 mt-3.5 text-sm transition-all ease-in-out duration-700 overflow-hidden ${
-                showManag ? "h-32" : "h-0"
-              }`}
-            >
-              {management.map((item) => (
-                <div
-                  className={`${
-                    selected === item.label && "bg-zinc-900"
-                  } flex justify-between hover:bg-zinc-900 items-center  p-2 rounded-md hover:cursor-pointer`}
-                  onClick={() => setSelected(item.label)}
-                >
-                  <div className="inline-flex items-center gap-2">
-                    <span
-                      className={`${
-                        selected !== item.label && "text-zinc-600"
-                      }`}
-                    >
-                      {item.icon}
-                    </span>
-                    {item.label}
-                  </div>
-                  <div
-                    className={`text-zinc-600 ${item.count == 0 && "hidden"}`}
-                  >
-                    {item.count}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-zinc-950 mt-3">
-          <div className="w-full space-y-3 mt-3.5 text-sm">
-            {bottom.map((item) => (
-              <div
-                className={`${
-                  selected === item.label && "bg-zinc-900"
-                } flex hover:bg-zinc-900 justify-between items-center  p-2 rounded-md hover:cursor-pointer`}
-                onClick={() => setSelected(item.label)}
-              >
-                <div className="inline-flex items-center gap-2">
-                  <span
-                    className={`${selected !== item.label && "text-zinc-600"}`}
-                  >
-                    {item.icon}
-                  </span>
-                  {item.label}
-                </div>
-                <div className={`text-zinc-600 ${item.count == 0 && "hidden"}`}>
-                  {item.count}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-      <div className="bg-zinc-900 rounded-lg h-full w-full max-w-sm border border-zinc-800 overflow-y-auto hide-scrollbar">
-        <div className="border-b border-zinc-800 h-14 flex items-center justify-between px-4 font-light text-sm">
-          <div>
-            <div className="inline-flex gap-2 items-center ">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 text-zinc-600"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  fill="currentColor"
-                  d="M5 21q-.825 0-1.412-.587T3 19V5q0-.825.588-1.412T5 3h14q.825 0 1.413.588T21 5v14q0 .825-.587 1.413T19 21zm7-2h7V5h-7z"
-                />
-              </svg>
-              <p>{selected}</p>
-            </div>
-          </div>
-          <div className="inline-flex items-center gap-2 text-zinc-600">
-            <div className="inline-flex gap-1 items-center">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  fill="currentColor"
-                  d="M9 16.17L5.53 12.7a.996.996 0 1 0-1.41 1.41l4.18 4.18c.39.39 1.02.39 1.41 0L20.29 7.71a.996.996 0 1 0-1.41-1.41z"
-                />
-              </svg>
-              <p>Select</p>
-            </div>
-            <div className="hover:cursor-pointer">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 text-zinc-800"
-                viewBox="0 0 16 16"
-              >
-                <path
-                  fill="currentColor"
-                  d="M7.5 3a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-1 0v-9a.5.5 0 0 1 .5-.5"
-                />
-              </svg>
-            </div>
-            <div className="hover:cursor-pointer">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5"
-                viewBox="0 0 21 21"
-              >
-                <path
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M6.5 4a1 1 0 0 1 1 1v2a1 1 0 1 1-2 0V5a1 1 0 0 1 1-1m12 2h-11m-2 0h-3m4 8a1 1 0 0 1 1 1v2a1 1 0 0 1-2 0v-2a1 1 0 0 1 1-1m12 2h-11m-2 0h-3m12-7a1 1 0 0 1 1 1v2a1 1 0 0 1-2 0v-2a1 1 0 0 1 1-1m-1 2h-11m16 0h-3"
-                />
-              </svg>
-            </div>
-          </div>
-        </div>
-        <div className="w-full p-4 h-full">
-          <form className="max-w-md mx-auto">
-            <div className="relative">
-              <div className="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
-                <svg
-                  className="w-4 h-4 text-zinc-600"
-                  aria-hidden="true"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    stroke="currentColor"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"
-                  />
-                </svg>
-              </div>
-              <input
-                type="search"
-                id="default-search"
-                className="block w-full p-2 ps-9 text-sm text-zinc-500 bg-zinc-950 rounded-lg outline-0"
-                placeholder="Search"
-              />
-              <button
-                type="submit"
-                className="text-zinc-700 hover:cursor-pointer absolute end-1 bottom-1 bg-zinc-900 font-medium rounded text-sm p-1"
-              >
-                ⌘K
-              </button>
-            </div>
-          </form>
-
-          <div className="w-full pt-5 flex gap-2">
-            {categories.map((item) => (
-              <div
-                className={`flex justify-center hover:cursor-pointer items-center rounded gap-1 h-8 font-sm font-light ${
-                  item.label === selectedCat
-                    ? "bg-blue-500 text-gray-200 w-full max-w-[200px]"
-                    : "bg-zinc-800 text-zinc-500 w-8 aspect-square hover:bg-zinc-950"
-                }`}
-                onClick={() => setSelectedCat(item.label)}
-              >
-                <div className="inline-flex gap-1 items-center">
-                  {item.icon}
-                  {selectedCat === item.label && <p>{item.label}</p>}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-8">
-            <p className="text-zinc-600">Pinned [{pinned.length}]</p>
-            <div className="w-full space-y-3 mt-3.5 text-sm">
-              {pinned.map((item) => (
-                <div
-                  className={`${
-                    selectedUser === item.id && "bg-zinc-800"
-                  } w-full inline-flex text-sm gap-3 hover:cursor-pointer hover:bg-zinc-800 rounded-md p-2.5`}
-                  onClick={() => setSelectedUser(item.id)}
-                >
-                  <div className="relative">
-                    <img
-                      className="min-w-10 min-h-10 w-10 h-10 max-w-10 max-h-10 rounded-full"
-                      src={item.image}
-                      alt=""
-                    />
-                    {item.active && (
-                      <span className="bottom-0 left-7 absolute  w-3.5 h-3.5 bg-blue-400 border-2 border-white dark:border-gray-800 rounded-full"></span>
-                    )}
-                  </div>
-                  <div className="w-full">
-                    <div className="w-full inline-flex items-center justify-between">
-                      <div>
-                        {item.names.map((name, index) => (
-                          <span key={index}>
-                            {name}
-                            {index < pinnedList[0].names.length - 1 ? ", " : ""}
-                          </span>
-                        ))}
-                        {item.messageCount > 1 && (
-                          <span className="pl-1 text-zinc-600">
-                            [{item.messageCount}]
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-zinc-600">{item.date}</div>
-                    </div>
-                    <div className="w-ful text-zinc-600 pt-1 flex gap-5 items-center justify-between">
-                      <div
-                        className="truncate max-w-[210px] overflow-hidden whitespace-nowrap"
-                        title={item.subject}
-                      >
-                        {item.subject}
-                      </div>
-
-                      <div className="inline-flex justify-center gap-1 items-center wrap-normal">
-                        {item.actions.map((action) => (
-                          <div>
-                            {action === 1 && (
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="h-4 text-orange-400"
-                                viewBox="0 0 512 512"
-                              >
-                                <path
-                                  fill="currentColor"
-                                  d="M449.07 399.08L278.64 82.58c-12.08-22.44-44.26-22.44-56.35 0L51.87 399.08A32 32 0 0 0 80 446.25h340.89a32 32 0 0 0 28.18-47.17m-198.6-1.83a20 20 0 1 1 20-20a20 20 0 0 1-20 20m21.72-201.15l-5.74 122a16 16 0 0 1-32 0l-5.74-121.95a21.73 21.73 0 0 1 21.5-22.69h.21a21.74 21.74 0 0 1 21.73 22.7Z"
-                                />
-                              </svg>
-                            )}
-                            {action === 2 && (
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="h-4 text-purple-500"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  fill="currentColor"
-                                  d="M8.352 20.242A4.63 4.63 0 0 0 12 22a4.63 4.63 0 0 0 3.648-1.758a27.2 27.2 0 0 1-7.296 0M18.75 9v.704c0 .845.24 1.671.692 2.374l1.108 1.723c1.011 1.574.239 3.713-1.52 4.21a25.8 25.8 0 0 1-14.06 0c-1.759-.497-2.531-2.636-1.52-4.21l1.108-1.723a4.4 4.4 0 0 0 .693-2.374V9c0-3.866 3.022-7 6.749-7s6.75 3.134 6.75 7"
-                                />
-                              </svg>
-                            )}
-
-                            {action === 3 && (
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="h-4 text-green-500"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  fill="currentColor"
-                                  d="M12 4a4 4 0 0 1 4 4a4 4 0 0 1-4 4a4 4 0 0 1-4-4a4 4 0 0 1 4-4m0 10c4.42 0 8 1.79 8 4v2H4v-2c0-2.21 3.58-4 8-4"
-                                />
-                              </svg>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="mt-5">
-            <p className="text-zinc-600">Primary [{primary.length}]</p>
-            <div className="w-full space-y-3 mt-3.5 text-sm">
-              {primary.map((item) => (
-                <div
-                  className={`${
-                    selectedUser === item.id && "bg-zinc-800"
-                  } w-full inline-flex text-sm gap-3 hover:cursor-pointer hover:bg-zinc-800 rounded-md p-2.5`}
-                  onClick={() => setSelectedUser(item.id)}
-                >
-                  <div className="relative">
-                    <img
-                      className="min-w-10 min-h-10 w-10 h-10 max-w-10 max-h-10 rounded-full"
-                      src={item.image}
-                      alt=""
-                    />
-                    {item.active && (
-                      <span className="bottom-0 left-7 absolute  w-3.5 h-3.5 bg-blue-500 border-2 border-white dark:border-gray-800 rounded-full"></span>
-                    )}
-                  </div>
-                  <div className="w-full">
-                    <div className="w-full inline-flex items-center justify-between">
-                      <div>
-                        {item.names.map((name, index) => (
-                          <span key={index}>
-                            {name}
-                            {index < pinnedList[0].names.length - 1 ? ", " : ""}
-                          </span>
-                        ))}
-                        {item.messageCount > 1 && (
-                          <span className="pl-1 text-zinc-600">
-                            [{item.messageCount}]
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-zinc-600">{item.date}</div>
-                    </div>
-                    <div className="w-ful text-zinc-600 pt-1 flex gap-5 items-center justify-between">
-                      <div
-                        className="truncate max-w-[210px] overflow-hidden whitespace-nowrap"
-                        title={item.subject}
-                      >
-                        {item.subject}
-                      </div>
-
-                      <div className="inline-flex justify-center gap-1 items-center wrap-normal">
-                        {item.actions.map((action) => (
-                          <div>
-                            {action === 1 && (
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="h-4 text-orange-400"
-                                viewBox="0 0 512 512"
-                              >
-                                <path
-                                  fill="currentColor"
-                                  d="M449.07 399.08L278.64 82.58c-12.08-22.44-44.26-22.44-56.35 0L51.87 399.08A32 32 0 0 0 80 446.25h340.89a32 32 0 0 0 28.18-47.17m-198.6-1.83a20 20 0 1 1 20-20a20 20 0 0 1-20 20m21.72-201.15l-5.74 122a16 16 0 0 1-32 0l-5.74-121.95a21.73 21.73 0 0 1 21.5-22.69h.21a21.74 21.74 0 0 1 21.73 22.7Z"
-                                />
-                              </svg>
-                            )}
-                            {action === 2 && (
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="h-4 text-purple-500"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  fill="currentColor"
-                                  d="M8.352 20.242A4.63 4.63 0 0 0 12 22a4.63 4.63 0 0 0 3.648-1.758a27.2 27.2 0 0 1-7.296 0M18.75 9v.704c0 .845.24 1.671.692 2.374l1.108 1.723c1.011 1.574.239 3.713-1.52 4.21a25.8 25.8 0 0 1-14.06 0c-1.759-.497-2.531-2.636-1.52-4.21l1.108-1.723a4.4 4.4 0 0 0 .693-2.374V9c0-3.866 3.022-7 6.749-7s6.75 3.134 6.75 7"
-                                />
-                              </svg>
-                            )}
-
-                            {action === 3 && (
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="h-4 text-green-500"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  fill="currentColor"
-                                  d="M12 4a4 4 0 0 1 4 4a4 4 0 0 1-4 4a4 4 0 0 1-4-4a4 4 0 0 1 4-4m0 10c4.42 0 8 1.79 8 4v2H4v-2c0-2.21 3.58-4 8-4"
-                                />
-                              </svg>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-      <div className="bg-zinc-900 rounded-lg h-full w-full border border-zinc-800 overflow-y-auto hide-scrollbar">
-        <div className="border-b border-zinc-800 h-14 flex items-center justify-between px-4 font-light text-sm">
-          <div className="inline-flex items-center gap-1 text-zinc-600">
-            <div>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-6 hover:cursor-pointer text-zinc-700"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  fill="currentColor"
-                  d="m12 13.4l-2.9 2.9q-.275.275-.7.275t-.7-.275t-.275-.7t.275-.7l2.9-2.9l-2.9-2.875q-.275-.275-.275-.7t.275-.7t.7-.275t.7.275l2.9 2.9l2.875-2.9q.275-.275.7-.275t.7.275q.3.3.3.713t-.3.687L13.375 12l2.9 2.9q.275.275.275.7t-.275.7q-.3.3-.712.3t-.688-.3z"
-                />
-              </svg>
-            </div>
-            <div className="hover:cursor-pointer">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 text-zinc-800"
-                viewBox="0 0 16 16"
-              >
-                <path
-                  fill="currentColor"
-                  d="M7.5 3a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-1 0v-9a.5.5 0 0 1 .5-.5"
-                />
-              </svg>
-            </div>
-            <div className="inline-flex items-center gap-1.5">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-3 hover:cursor-pointer"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  fill="currentColor"
-                  d="m9.55 12l7.35 7.35q.375.375.363.875t-.388.875t-.875.375t-.875-.375l-7.7-7.675q-.3-.3-.45-.675t-.15-.75t.15-.75t.45-.675l7.7-7.7q.375-.375.888-.363t.887.388t.375.875t-.375.875z"
-                />
-              </svg>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-3 -rotate-180 hover:cursor-pointer"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  fill="currentColor"
-                  d="m9.55 12l7.35 7.35q.375.375.363.875t-.388.875t-.875.375t-.875-.375l-7.7-7.675q-.3-.3-.45-.675t-.15-.75t.15-.75t.45-.675l7.7-7.7q.375-.375.888-.363t.887.388t.375.875t-.375.875z"
-                />
-              </svg>
-            </div>
-          </div>
-
-          <div className="inline-flex items-center gap-2">
-            <div
-              className={`flex justify-center w-7 aspect-square hover:cursor-pointer items-center rounded gap-1 h-7 font-sm font-light bg-zinc-800 text-zinc-500 hover:bg-zinc-950`}
-            >
-              <div className="inline-flex gap-1 items-center -rotate-90">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 text-yellow-600 rotate-45"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    fill="currentColor"
-                    d="M21.447 9.559a1.8 1.8 0 0 1-.25.82a2 2 0 0 1-.56.63a.7.7 0 0 1-.34.13l-1.76.23a1 1 0 0 0-.52.26c-.53.51-1.07 1-1.81 1.78l-.85.84a.93.93 0 0 0-.23.41l-.94 3.78a.6.6 0 0 1 0 .12a2 2 0 0 1-1.44 1.15h-.36a2.3 2.3 0 0 1-.58-.08a1.94 1.94 0 0 1-.81-.49l-2.54-2.53l-4.67 4.67a.75.75 0 0 1-1.06-1.06l4.67-4.67l-2.5-2.5a2 2 0 0 1-.48-.82a1.8 1.8 0 0 1-.05-.95a1.94 1.94 0 0 1 .39-.85a2 2 0 0 1 .75-.58h.12l3.74-1a1 1 0 0 0 .44-.25c1.39-1.37 1.87-1.85 2.63-2.67a.86.86 0 0 0 .23-.5l.24-1.77a.7.7 0 0 1 .13-.35a2 2 0 0 1 2.28-.69a2 2 0 0 1 .72.46l4.88 4.9a2 2 0 0 1 .57 1.55z"
+                    d="M16 12a2 2 0 0 1 2-2a2 2 0 0 1 2 2a2 2 0 0 1-2 2a2 2 0 0 1-2-2m-6 0a2 2 0 0 1 2-2a2 2 0 0 1 2 2a2 2 0 0 1-2 2a2 2 0 0 1-2-2m-6 0a2 2 0 0 1 2-2a2 2 0 0 1 2 2a2 2 0 0 1-2 2a2 2 0 0 1-2-2"
                   />
                 </svg>
               </div>
             </div>
-
-            <div className="hover:cursor-pointer">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 text-zinc-800"
-                viewBox="0 0 16 16"
-              >
-                <path
-                  fill="currentColor"
-                  d="M7.5 3a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-1 0v-9a.5.5 0 0 1 .5-.5"
-                />
-              </svg>
-            </div>
-
-            <div
-              className={`flex justify-center w-24 aspect-square hover:cursor-pointer items-center rounded gap-1 h-7 font-sm font-light bg-zinc-800 text-zinc-500 hover:bg-zinc-950`}
-            >
-              <div className="inline-flex gap-1 items-center">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 rotate-180"
-                  viewBox="0 0 24 24"
-                >
-                  <g
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="1.5"
-                    color="currentColor"
-                  >
-                    <path d="M13 6H8.5a4.5 4.5 0 0 0 0 9H20" />
-                    <path d="M17 12s3 2.21 3 3s-3 3-3 3" />
-                  </g>
-                </svg>
-                <p>Reply all</p>
-              </div>
-            </div>
-
-            {categoryList2.map((item) => (
-              <div
-                className={`flex justify-center w-7 aspect-square hover:cursor-pointer items-center rounded gap-1 h-7 font-sm font-light ${
-                  item.label === "Bin"
-                    ? "text-red-900 bg-red-400"
-                    : "bg-zinc-800 text-zinc-500 hover:bg-zinc-950"
-                }`}
-                onClick={() => setSelectedCat(item.label)}
-              >
-                <div className="inline-flex gap-1 items-center">
-                  {item.icon}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="w-full p-4">
-          <div>
-            <div>
-              <p>
-                Re: Design review feedback{" "}
-                <span className="text-zinc-700">[5]</span>
+            <div className="py-5">
+              <p>Baked Design</p>
+              <p className="font-light text-sm text-zinc-600">
+                work@baked.design
               </p>
             </div>
-            <p className="font-light pt-2 inline-flex items-center gap-1 text-sm text-zinc-600">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-4"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  fill="currentColor"
-                  d="M5 22q-.825 0-1.412-.587T3 20V6q0-.825.588-1.412T5 4h1V2h2v2h8V2h2v2h1q.825 0 1.413.588T21 6v14q0 .825-.587 1.413T19 22zm0-2h14V10H5z"
-                />
-              </svg>{" "}
-              March 25 - March 29
-            </p>
-
-            <div className="border border-purple-600 my-5 rounded-lg p-1">
-              <div className="p-2">
-                <div
-                  className="inline-flex text-sm gap-2 hover:cursor-pointer items-center text-zinc-600"
-                  onClick={() => setShowSummary((prev) => !prev)}
-                >
-                  <p className="">Attachments</p>
+            <div
+              className="bg-zinc-900 rounded-lg flex justify-center h-10 hover:cursor-pointer"
+              onClick={() => setShowModal(true)}
+            >
+              <div className="inline-flex items-center gap-2 text-sm">
+                <span>
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     viewBox="0 0 24 24"
-                    className={`${
-                      !showSummary && "rotate-180"
-                    } h-5 transition-all ease-in-out duration-300`}
+                    className="h-5 text-zinc-600"
                   >
                     <path
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="m6 15l6-6l6 6"
+                      fill="currentColor"
+                      d="M5 21q-.825 0-1.412-.587T3 19V5q0-.825.588-1.412T5 3h6.525q.5 0 .75.313t.25.687t-.262.688T11.5 5H5v14h14v-6.525q0-.5.313-.75t.687-.25t.688.25t.312.75V19q0 .825-.587 1.413T19 21zm4-7v-2.425q0-.4.15-.763t.425-.637l8.6-8.6q.3-.3.675-.45t.75-.15q.4 0 .763.15t.662.45L22.425 3q.275.3.425.663T23 4.4t-.137.738t-.438.662l-8.6 8.6q-.275.275-.637.438t-.763.162H10q-.425 0-.712-.288T9 14m12.025-9.6l-1.4-1.4zM11 13h1.4l5.8-5.8l-.7-.7l-.725-.7L11 11.575zm6.5-6.5l-.725-.7zl.7.7z"
                     />
                   </svg>
-                </div>
-                <div className="overflow-hidden ">
-                  <p className="text-zinc-300 font-light text-sm pt-2">
-                    Lorem ipsum dolor sit amet consectetur adipisicing elit.
-                    Earum ex, aliquid repellat illo consequuntur expedita rem
-                    ipsum perferendis voluptatem nostrum eaque qui est ipsam
-                    beatae eius repudiandae soluta obcaecati. Tenetur. Lorem
-                    ipsum, dolor sit amet consectetur adipisicing elit.
-                    Dignissimos iure unde maiores voluptas dolorum quae, ipsa
-                    obcaecati accusamus vero numquam temporibus officiis minus
-                    velit facere, odit, rem impedit assumenda reiciendis.
-                  </p>
-                </div>
+                </span>
+                New email
+              </div>
+            </div>
+            <div className="mt-6">
+              <p className="text-zinc-600 pl-2">Core</p>
+              <div className="w-full space-y-3 mt-3.5 text-sm">
+                {core.map((item) => (
+                  <div
+                    className={`${
+                      selected === item.label && "bg-zinc-900"
+                    } flex justify-between hover:bg-zinc-900 items-center  p-2 rounded-md hover:cursor-pointer`}
+                    onClick={() => setSelected(item.label)}
+                  >
+                    <div className="inline-flex items-center gap-2">
+                      <span
+                        className={`${
+                          selected !== item.label && "text-zinc-600"
+                        }`}
+                      >
+                        {item.icon}
+                      </span>
+                      {item.label}
+                    </div>
+                    <div
+                      className={`text-zinc-600 ${item.count == 0 && "hidden"}`}
+                    >
+                      {item.count}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="mt-6">
+              <div
+                className="inline-flex gap-2 hover:cursor-pointer items-center text-zinc-600"
+                onClick={() => setShowManag((prev) => !prev)}
+              >
+                <p className="pl-2">Management</p>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  className={`${
+                    !showManag && "rotate-180"
+                  } h-5 transition-all ease-in-out duration-300`}
+                >
+                  <path
+                    fill="none"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="m6 15l6-6l6 6"
+                  />
+                </svg>
+              </div>
+              <div
+                className={`w-full space-y-3 mt-3.5 text-sm transition-all ease-in-out duration-700 overflow-hidden ${
+                  showManag ? "h-32" : "h-0"
+                }`}
+              >
+                {management.map((item) => (
+                  <div
+                    className={`${
+                      selected === item.label && "bg-zinc-900"
+                    } flex justify-between hover:bg-zinc-900 items-center  p-2 rounded-md hover:cursor-pointer`}
+                    onClick={() => setSelected(item.label)}
+                  >
+                    <div className="inline-flex items-center gap-2">
+                      <span
+                        className={`${
+                          selected !== item.label && "text-zinc-600"
+                        }`}
+                      >
+                        {item.icon}
+                      </span>
+                      {item.label}
+                    </div>
+                    <div
+                      className={`text-zinc-600 ${item.count == 0 && "hidden"}`}
+                    >
+                      {item.count}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
 
-          <div className="w-full space-y-5">
-            {[1, 2, 3, 4].map((item) => (
-              <div className="space-y-4 pt-5">
+          <div className="bg-zinc-950 mt-3">
+            <div className="w-full space-y-3 mt-3.5 text-sm">
+              {bottom.map((item) => (
                 <div
-                  className={`w-full inline-flex text-sm gap-3 hover:cursor-pointer hover:bg-zinc-800 rounded-md`}
+                  className={`${
+                    selected === item.label && "bg-zinc-900"
+                  } flex hover:bg-zinc-900 justify-between items-center  p-2 rounded-md hover:cursor-pointer`}
+                  onClick={() => setSelected(item.label)}
                 >
-                  <div className="relative">
-                    <img
-                      className="min-w-10 min-h-10 w-10 h-10 max-w-10 max-h-10 rounded-full"
-                      src={"https://stripe.com/img/v3/home/twitter.png"}
-                      alt=""
-                    />
+                  <div className="inline-flex items-center gap-2">
+                    <span
+                      className={`${
+                        selected !== item.label && "text-zinc-600"
+                      }`}
+                    >
+                      {item.icon}
+                    </span>
+                    {item.label}
                   </div>
-                  <div className="w-full">
-                    <div className="w-full inline-flex items-center justify-between">
-                      <div>Stripe support</div>
-                      <div className="text-zinc-600">March 25, 105AM</div>
+                  <div
+                    className={`text-zinc-600 ${item.count == 0 && "hidden"}`}
+                  >
+                    {item.count}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="bg-zinc-900 rounded-lg h-full w-full max-w-sm border border-zinc-800 overflow-y-auto hide-scrollbar">
+          <div className="border-b border-zinc-800 h-14 flex items-center justify-between px-4 font-light text-sm">
+            <div>
+              <div className="inline-flex gap-2 items-center ">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 text-zinc-600"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    fill="currentColor"
+                    d="M5 21q-.825 0-1.412-.587T3 19V5q0-.825.588-1.412T5 3h14q.825 0 1.413.588T21 5v14q0 .825-.587 1.413T19 21zm7-2h7V5h-7z"
+                  />
+                </svg>
+                <p>{selected}</p>
+              </div>
+            </div>
+            <div className="inline-flex items-center gap-2 text-zinc-600">
+              <div className="inline-flex gap-1 items-center">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    fill="currentColor"
+                    d="M9 16.17L5.53 12.7a.996.996 0 1 0-1.41 1.41l4.18 4.18c.39.39 1.02.39 1.41 0L20.29 7.71a.996.996 0 1 0-1.41-1.41z"
+                  />
+                </svg>
+                <p>Select</p>
+              </div>
+              <div className="hover:cursor-pointer">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 text-zinc-800"
+                  viewBox="0 0 16 16"
+                >
+                  <path
+                    fill="currentColor"
+                    d="M7.5 3a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-1 0v-9a.5.5 0 0 1 .5-.5"
+                  />
+                </svg>
+              </div>
+              <div className="hover:cursor-pointer">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5"
+                  viewBox="0 0 21 21"
+                >
+                  <path
+                    fill="none"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M6.5 4a1 1 0 0 1 1 1v2a1 1 0 1 1-2 0V5a1 1 0 0 1 1-1m12 2h-11m-2 0h-3m4 8a1 1 0 0 1 1 1v2a1 1 0 0 1-2 0v-2a1 1 0 0 1 1-1m12 2h-11m-2 0h-3m12-7a1 1 0 0 1 1 1v2a1 1 0 0 1-2 0v-2a1 1 0 0 1 1-1m-1 2h-11m16 0h-3"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div className="w-full p-4 h-full">
+            <form className="max-w-md mx-auto">
+              <div className="relative">
+                <div className="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
+                  <svg
+                    className="w-4 h-4 text-zinc-600"
+                    aria-hidden="true"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"
+                    />
+                  </svg>
+                </div>
+                <input
+                  type="search"
+                  id="default-search"
+                  className="block w-full p-2 ps-9 text-sm text-zinc-500 bg-zinc-950 rounded-lg outline-0"
+                  placeholder="Search"
+                />
+                <button
+                  type="submit"
+                  className="text-zinc-700 hover:cursor-pointer absolute end-1 bottom-1 bg-zinc-900 font-medium rounded text-sm p-1"
+                >
+                  ⌘K
+                </button>
+              </div>
+            </form>
+
+            <div className="w-full pt-5 flex gap-2">
+              {categories.map((item) => (
+                <div
+                  className={`flex justify-center hover:cursor-pointer items-center rounded gap-1 h-8 font-sm font-light ${
+                    item.label === selectedCat
+                      ? "bg-blue-500 text-gray-200 w-full max-w-[200px]"
+                      : "bg-zinc-800 text-zinc-500 w-8 aspect-square hover:bg-zinc-950"
+                  }`}
+                  onClick={() => setSelectedCat(item.label)}
+                >
+                  <div className="inline-flex gap-1 items-center">
+                    {item.icon}
+                    {selectedCat === item.label && <p>{item.label}</p>}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-8">
+              <p className="text-zinc-600">Pinned [{pinned.length}]</p>
+              <div className="w-full space-y-3 mt-3.5 text-sm">
+                {pinned.map((item) => (
+                  <div
+                    className={`${
+                      selectedUser === item.id && "bg-zinc-800"
+                    } w-full inline-flex text-sm gap-3 hover:cursor-pointer hover:bg-zinc-800 rounded-md p-2.5`}
+                    onClick={() => setSelectedUser(item.id)}
+                  >
+                    <div className="relative">
+                      <img
+                        className="min-w-10 min-h-10 w-10 h-10 max-w-10 max-h-10 rounded-full"
+                        src={item.image}
+                        alt=""
+                      />
+                      {item.active && (
+                        <span className="bottom-0 left-7 absolute  w-3.5 h-3.5 bg-blue-400 border-2 border-white dark:border-gray-800 rounded-full"></span>
+                      )}
                     </div>
-                    <div className="w-ful text-zinc-600 pt-1 flex gap-5 items-center justify-between">
-                      <div className="truncate max-w-[210px] overflow-hidden whitespace-nowrap">
-                        To:Alex, Serah
+                    <div className="w-full">
+                      <div className="w-full inline-flex items-center justify-between">
+                        <div>
+                          {item.names.map((name, index) => (
+                            <span key={index}>
+                              {name}
+                              {index < pinnedList[0].names.length - 1
+                                ? ", "
+                                : ""}
+                            </span>
+                          ))}
+                          {item.messageCount > 1 && (
+                            <span className="pl-1 text-zinc-600">
+                              [{item.messageCount}]
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-zinc-600">{item.date}</div>
+                      </div>
+                      <div className="w-ful text-zinc-600 pt-1 flex gap-5 items-center justify-between">
+                        <div
+                          className="truncate max-w-[210px] overflow-hidden whitespace-nowrap"
+                          title={item.subject}
+                        >
+                          {item.subject}
+                        </div>
+
+                        <div className="inline-flex justify-center gap-1 items-center wrap-normal">
+                          {item.actions.map((action) => (
+                            <div>
+                              {action === 1 && (
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="h-4 text-orange-400"
+                                  viewBox="0 0 512 512"
+                                >
+                                  <path
+                                    fill="currentColor"
+                                    d="M449.07 399.08L278.64 82.58c-12.08-22.44-44.26-22.44-56.35 0L51.87 399.08A32 32 0 0 0 80 446.25h340.89a32 32 0 0 0 28.18-47.17m-198.6-1.83a20 20 0 1 1 20-20a20 20 0 0 1-20 20m21.72-201.15l-5.74 122a16 16 0 0 1-32 0l-5.74-121.95a21.73 21.73 0 0 1 21.5-22.69h.21a21.74 21.74 0 0 1 21.73 22.7Z"
+                                  />
+                                </svg>
+                              )}
+                              {action === 2 && (
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="h-4 text-purple-500"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    fill="currentColor"
+                                    d="M8.352 20.242A4.63 4.63 0 0 0 12 22a4.63 4.63 0 0 0 3.648-1.758a27.2 27.2 0 0 1-7.296 0M18.75 9v.704c0 .845.24 1.671.692 2.374l1.108 1.723c1.011 1.574.239 3.713-1.52 4.21a25.8 25.8 0 0 1-14.06 0c-1.759-.497-2.531-2.636-1.52-4.21l1.108-1.723a4.4 4.4 0 0 0 .693-2.374V9c0-3.866 3.022-7 6.749-7s6.75 3.134 6.75 7"
+                                  />
+                                </svg>
+                              )}
+
+                              {action === 3 && (
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="h-4 text-green-500"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    fill="currentColor"
+                                    d="M12 4a4 4 0 0 1 4 4a4 4 0 0 1-4 4a4 4 0 0 1-4-4a4 4 0 0 1 4-4m0 10c4.42 0 8 1.79 8 4v2H4v-2c0-2.21 3.58-4 8-4"
+                                  />
+                                </svg>
+                              )}
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-                <p className="text-sm font-light text-zinc-200">
-                  Lorem ipsum dolor, sit amet consectetur adipisicing elit.
-                  Adipisci itaque totam, ipsam architecto est fuga saepe, ut
-                  libero eos omnis sapiente earum quasi ipsum atque nisi
-                  blanditiis, velit deserunt assumenda.
-                </p>
-                <p className="text-sm font-light text-zinc-200">
-                  Lorem ipsum dolor, sit amet consectetur adipisicing elit.
-                  Adipisci itaque totam, ipsam architecto est fuga saepe, ut
-                  libero eos omnis sapiente earum quasi ipsum atque nisi
-                  blanditiis, velit deserunt assumenda.
-                </p>
-
-                <div className="flex pt-2 items-center text-sm mb-3 gap-2">
-                  <div
-                    className={`flex justify-center px-1 w-fit hover:cursor-pointer items-center rounded-md gap-1 h-7 font-sm font-light bg-zinc-800 `}
-                  >
-                    <div className="flex gap-1 items-center">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-4 text-purple-700"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          fill="currentColor"
-                          d="m8.5 13.5l2.5 3l3.5-4.5l4.5 6H5m16 1V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2"
-                        />
-                      </svg>
-                      <p className="inline-flex gap-2">
-                        image.png{" "}
-                        <span className="text-zinc-500 text-sm">21MB</span>
-                      </p>
-                    </div>
-                  </div>
-                  <div
-                    className={`flex justify-center px-1 w-fit hover:cursor-pointer items-center rounded-md gap-1 h-7 font-sm font-light bg-zinc-800 `}
-                  >
-                    <div className="flex gap-1 items-center">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-4 text-purple-700"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          fill="currentColor"
-                          d="m8.5 13.5l2.5 3l3.5-4.5l4.5 6H5m16 1V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2"
-                        />
-                      </svg>
-                      <p className="inline-flex gap-2">
-                        image.png{" "}
-                        <span className="text-zinc-500 text-sm">21MB</span>
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="inline-flex pt-2 items-center text-sm gap-2">
-                  <div
-                    className={`flex justify-center w-20 aspect-square hover:cursor-pointer items-center rounded gap-1 h-7 font-sm font-light bg-zinc-800 text-zinc-500 hover:bg-zinc-950`}
-                  >
-                    <div className="inline-flex gap-1 items-center">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 rotate-180"
-                        viewBox="0 0 24 24"
-                      >
-                        <g
-                          fill="none"
-                          stroke="currentColor"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="1.5"
-                          color="currentColor"
-                        >
-                          <path d="M13 6H8.5a4.5 4.5 0 0 0 0 9H20" />
-                          <path d="M17 12s3 2.21 3 3s-3 3-3 3" />
-                        </g>
-                      </svg>
-                      <p>Reply</p>
-                    </div>
-                  </div>
-                  <div
-                    className={`flex justify-center w-24 aspect-square hover:cursor-pointer items-center rounded gap-1 h-7 font-sm font-light bg-zinc-800 text-zinc-500 hover:bg-zinc-950`}
-                  >
-                    <div className="inline-flex gap-1 items-center">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 "
-                        viewBox="0 0 24 24"
-                      >
-                        <g
-                          fill="none"
-                          stroke="currentColor"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                        >
-                          <path
-                            stroke-dasharray="16"
-                            stroke-dashoffset="16"
-                            d="M5 12h13.5"
-                          >
-                            <animate
-                              fill="freeze"
-                              attributeName="stroke-dashoffset"
-                              dur="0.2s"
-                              values="16;0"
-                            />
-                          </path>
-                          <path
-                            stroke-dasharray="10"
-                            stroke-dashoffset="10"
-                            d="M19 12l-5 5M19 12l-5 -5"
-                          >
-                            <animate
-                              fill="freeze"
-                              attributeName="stroke-dashoffset"
-                              begin="0.2s"
-                              dur="0.2s"
-                              values="10;0"
-                            />
-                          </path>
-                        </g>
-                      </svg>
-                      <p>Forward</p>
-                    </div>
-                  </div>
-                </div>
+                ))}
               </div>
-            ))}
+            </div>
+
+            <div className="mt-5">
+              <p className="text-zinc-600">Primary [{primary.length}]</p>
+              <div className="w-full space-y-3 mt-3.5 text-sm">
+                {primary.map((item) => (
+                  <div
+                    className={`${
+                      selectedUser === item.id && "bg-zinc-800"
+                    } w-full inline-flex text-sm gap-3 hover:cursor-pointer hover:bg-zinc-800 rounded-md p-2.5`}
+                    onClick={() => setSelectedUser(item.id)}
+                  >
+                    <div className="relative">
+                      <img
+                        className="min-w-10 min-h-10 w-10 h-10 max-w-10 max-h-10 rounded-full"
+                        src={item.image}
+                        alt=""
+                      />
+                      {item.active && (
+                        <span className="bottom-0 left-7 absolute  w-3.5 h-3.5 bg-blue-500 border-2 border-white dark:border-gray-800 rounded-full"></span>
+                      )}
+                    </div>
+                    <div className="w-full">
+                      <div className="w-full inline-flex items-center justify-between">
+                        <div>
+                          {item.names.map((name, index) => (
+                            <span key={index}>
+                              {name}
+                              {index < pinnedList[0].names.length - 1
+                                ? ", "
+                                : ""}
+                            </span>
+                          ))}
+                          {item.messageCount > 1 && (
+                            <span className="pl-1 text-zinc-600">
+                              [{item.messageCount}]
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-zinc-600">{item.date}</div>
+                      </div>
+                      <div className="w-ful text-zinc-600 pt-1 flex gap-5 items-center justify-between">
+                        <div
+                          className="truncate max-w-[210px] overflow-hidden whitespace-nowrap"
+                          title={item.subject}
+                        >
+                          {item.subject}
+                        </div>
+
+                        <div className="inline-flex justify-center gap-1 items-center wrap-normal">
+                          {item.actions.map((action) => (
+                            <div>
+                              {action === 1 && (
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="h-4 text-orange-400"
+                                  viewBox="0 0 512 512"
+                                >
+                                  <path
+                                    fill="currentColor"
+                                    d="M449.07 399.08L278.64 82.58c-12.08-22.44-44.26-22.44-56.35 0L51.87 399.08A32 32 0 0 0 80 446.25h340.89a32 32 0 0 0 28.18-47.17m-198.6-1.83a20 20 0 1 1 20-20a20 20 0 0 1-20 20m21.72-201.15l-5.74 122a16 16 0 0 1-32 0l-5.74-121.95a21.73 21.73 0 0 1 21.5-22.69h.21a21.74 21.74 0 0 1 21.73 22.7Z"
+                                  />
+                                </svg>
+                              )}
+                              {action === 2 && (
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="h-4 text-purple-500"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    fill="currentColor"
+                                    d="M8.352 20.242A4.63 4.63 0 0 0 12 22a4.63 4.63 0 0 0 3.648-1.758a27.2 27.2 0 0 1-7.296 0M18.75 9v.704c0 .845.24 1.671.692 2.374l1.108 1.723c1.011 1.574.239 3.713-1.52 4.21a25.8 25.8 0 0 1-14.06 0c-1.759-.497-2.531-2.636-1.52-4.21l1.108-1.723a4.4 4.4 0 0 0 .693-2.374V9c0-3.866 3.022-7 6.749-7s6.75 3.134 6.75 7"
+                                  />
+                                </svg>
+                              )}
+
+                              {action === 3 && (
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="h-4 text-green-500"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    fill="currentColor"
+                                    d="M12 4a4 4 0 0 1 4 4a4 4 0 0 1-4 4a4 4 0 0 1-4-4a4 4 0 0 1 4-4m0 10c4.42 0 8 1.79 8 4v2H4v-2c0-2.21 3.58-4 8-4"
+                                  />
+                                </svg>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </main>
+        <div className="bg-zinc-900 rounded-lg h-full w-full border border-zinc-800 overflow-y-auto hide-scrollbar">
+          <div className="border-b border-zinc-800 h-14 flex items-center justify-between px-4 font-light text-sm">
+            <div className="inline-flex items-center gap-1 text-zinc-600">
+              <div>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-6 hover:cursor-pointer text-zinc-700"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    fill="currentColor"
+                    d="m12 13.4l-2.9 2.9q-.275.275-.7.275t-.7-.275t-.275-.7t.275-.7l2.9-2.9l-2.9-2.875q-.275-.275-.275-.7t.275-.7t.7-.275t.7.275l2.9 2.9l2.875-2.9q.275-.275.7-.275t.7.275q.3.3.3.713t-.3.687L13.375 12l2.9 2.9q.275.275.275.7t-.275.7q-.3.3-.712.3t-.688-.3z"
+                  />
+                </svg>
+              </div>
+              <div className="hover:cursor-pointer">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 text-zinc-800"
+                  viewBox="0 0 16 16"
+                >
+                  <path
+                    fill="currentColor"
+                    d="M7.5 3a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-1 0v-9a.5.5 0 0 1 .5-.5"
+                  />
+                </svg>
+              </div>
+              <div className="inline-flex items-center gap-1.5">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-3 hover:cursor-pointer"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    fill="currentColor"
+                    d="m9.55 12l7.35 7.35q.375.375.363.875t-.388.875t-.875.375t-.875-.375l-7.7-7.675q-.3-.3-.45-.675t-.15-.75t.15-.75t.45-.675l7.7-7.7q.375-.375.888-.363t.887.388t.375.875t-.375.875z"
+                  />
+                </svg>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-3 -rotate-180 hover:cursor-pointer"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    fill="currentColor"
+                    d="m9.55 12l7.35 7.35q.375.375.363.875t-.388.875t-.875.375t-.875-.375l-7.7-7.675q-.3-.3-.45-.675t-.15-.75t.15-.75t.45-.675l7.7-7.7q.375-.375.888-.363t.887.388t.375.875t-.375.875z"
+                  />
+                </svg>
+              </div>
+            </div>
+
+            <div className="inline-flex items-center gap-2">
+              <div
+                className={`flex justify-center w-7 aspect-square hover:cursor-pointer items-center rounded gap-1 h-7 font-sm font-light bg-zinc-800 text-zinc-500 hover:bg-zinc-950`}
+              >
+                <div className="inline-flex gap-1 items-center -rotate-90">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 text-yellow-600 rotate-45"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      fill="currentColor"
+                      d="M21.447 9.559a1.8 1.8 0 0 1-.25.82a2 2 0 0 1-.56.63a.7.7 0 0 1-.34.13l-1.76.23a1 1 0 0 0-.52.26c-.53.51-1.07 1-1.81 1.78l-.85.84a.93.93 0 0 0-.23.41l-.94 3.78a.6.6 0 0 1 0 .12a2 2 0 0 1-1.44 1.15h-.36a2.3 2.3 0 0 1-.58-.08a1.94 1.94 0 0 1-.81-.49l-2.54-2.53l-4.67 4.67a.75.75 0 0 1-1.06-1.06l4.67-4.67l-2.5-2.5a2 2 0 0 1-.48-.82a1.8 1.8 0 0 1-.05-.95a1.94 1.94 0 0 1 .39-.85a2 2 0 0 1 .75-.58h.12l3.74-1a1 1 0 0 0 .44-.25c1.39-1.37 1.87-1.85 2.63-2.67a.86.86 0 0 0 .23-.5l.24-1.77a.7.7 0 0 1 .13-.35a2 2 0 0 1 2.28-.69a2 2 0 0 1 .72.46l4.88 4.9a2 2 0 0 1 .57 1.55z"
+                    />
+                  </svg>
+                </div>
+              </div>
+
+              <div className="hover:cursor-pointer">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 text-zinc-800"
+                  viewBox="0 0 16 16"
+                >
+                  <path
+                    fill="currentColor"
+                    d="M7.5 3a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-1 0v-9a.5.5 0 0 1 .5-.5"
+                  />
+                </svg>
+              </div>
+
+              <div
+                className={`flex justify-center w-24 aspect-square hover:cursor-pointer items-center rounded gap-1 h-7 font-sm font-light bg-zinc-800 text-zinc-500 hover:bg-zinc-950`}
+              >
+                <div className="inline-flex gap-1 items-center">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 rotate-180"
+                    viewBox="0 0 24 24"
+                  >
+                    <g
+                      fill="none"
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="1.5"
+                      color="currentColor"
+                    >
+                      <path d="M13 6H8.5a4.5 4.5 0 0 0 0 9H20" />
+                      <path d="M17 12s3 2.21 3 3s-3 3-3 3" />
+                    </g>
+                  </svg>
+                  <p>Reply all</p>
+                </div>
+              </div>
+
+              {categoryList2.map((item) => (
+                <div
+                  className={`flex justify-center w-7 aspect-square hover:cursor-pointer items-center rounded gap-1 h-7 font-sm font-light ${
+                    item.label === "Bin"
+                      ? "text-red-900 bg-red-400"
+                      : "bg-zinc-800 text-zinc-500 hover:bg-zinc-950"
+                  }`}
+                  onClick={() => setSelectedCat(item.label)}
+                >
+                  <div className="inline-flex gap-1 items-center">
+                    {item.icon}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="w-full p-4">
+            {/* <div>
+              <div>
+                <p>
+                  Re: Design review feedback{" "}
+                  <span className="text-zinc-700">[5]</span>
+                </p>
+              </div>
+              <p className="font-light pt-2 inline-flex items-center gap-1 text-sm text-zinc-600">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-4"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    fill="currentColor"
+                    d="M5 22q-.825 0-1.412-.587T3 20V6q0-.825.588-1.412T5 4h1V2h2v2h8V2h2v2h1q.825 0 1.413.588T21 6v14q0 .825-.587 1.413T19 22zm0-2h14V10H5z"
+                  />
+                </svg>{" "}
+                March 25 - March 29
+              </p>
+
+            </div> */}
+
+            <div className="w-full space-y-5">
+              {loading && (
+                <div className="flex justify-center items-center py-10">
+                  <svg
+                    className="animate-spin h-6 w-6 text-zinc-500"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8v8z"
+                    ></path>
+                  </svg>
+                </div>
+              )}
+              {emails.map((email) => (
+                <div className="space-y-4 pt-5">
+                  <div
+                    className={`w-full inline-flex text-sm gap-3 hover:cursor-pointer hover:bg-zinc-800 rounded-md`}
+                  >
+                    <div className="relative">
+                      <img
+                        className="min-w-10 min-h-10 w-10 h-10 max-w-10 max-h-10 rounded-full"
+                        src={"https://stripe.com/img/v3/home/twitter.png"}
+                        alt=""
+                      />
+                    </div>
+                    <div className="w-full">
+                      <div className="w-full inline-flex items-center justify-between">
+                        <div>{email.from}</div>
+                        <div className="text-zinc-600">March 25, 105AM</div>
+                      </div>
+                      <div className="w-ful text-zinc-600 pt-1 flex gap-5 items-center justify-between">
+                        <div className="truncate max-w-[210px] overflow-hidden whitespace-nowrap">
+                          To: {email.to}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="border border-purple-600 my-5 rounded-lg p-1">
+                    <div className="p-2">
+                      <div
+                        className="inline-flex text-sm gap-2 hover:cursor-pointer items-center text-zinc-600"
+                        onClick={() => setShowSummary((prev) => !prev)}
+                      >
+                        <p className="">AI Summary</p>
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 24 24"
+                          className={`${
+                            !showSummary && "rotate-180"
+                          } h-5 transition-all ease-in-out duration-300`}
+                        >
+                          <path
+                            fill="none"
+                            stroke="currentColor"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="m6 15l6-6l6 6"
+                          />
+                        </svg>
+                      </div>
+                      <div className="overflow-hidden ">
+                        <p className="text-zinc-300 font-light text-sm pt-2">
+                          {email.aiInsights?.summary}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Render audio player if available */}
+                  {email.aiInsights?.summaryAudioUrl && (
+                    <MediaThemeTailwindAudio style={{width: "100%"}}>
+                      <audio
+                        slot="media"
+                        src="https://132260253285-us-east-2-email-bucket.s3.us-east-2.amazonaws.com/audio/721ee9ed-51d5-40fb-a154-10a40fa1e003.mp3"
+                        playsInline
+                        crossOrigin="anonymous"
+                      ></audio>
+                    </MediaThemeTailwindAudio>
+                  )}
+
+                  {email.htmlBody ? (
+                    <div
+                      className="text-sm font-light text-zinc-100!"
+                      dangerouslySetInnerHTML={{ __html: email.htmlBody }}
+                    />
+                  ) : (
+                    <p className="text-sm font-light text-zinc-100!">
+                      {email.plainBody}
+                    </p>
+                  )}
+
+                  {/* <div className="flex pt-2 items-center text-sm mb-3 gap-2">
+                    <div
+                      className={`flex justify-center px-1 w-fit hover:cursor-pointer items-center rounded-md gap-1 h-7 font-sm font-light bg-zinc-800 `}
+                    >
+                      <div className="flex gap-1 items-center">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-4 text-purple-700"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            fill="currentColor"
+                            d="m8.5 13.5l2.5 3l3.5-4.5l4.5 6H5m16 1V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2"
+                          />
+                        </svg>
+                        <p className="inline-flex gap-2">
+                          image.png{" "}
+                          <span className="text-zinc-500 text-sm">21MB</span>
+                        </p>
+                      </div>
+                    </div>
+                    <div
+                      className={`flex justify-center px-1 w-fit hover:cursor-pointer items-center rounded-md gap-1 h-7 font-sm font-light bg-zinc-800 `}
+                    >
+                      <div className="flex gap-1 items-center">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-4 text-purple-700"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            fill="currentColor"
+                            d="m8.5 13.5l2.5 3l3.5-4.5l4.5 6H5m16 1V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2"
+                          />
+                        </svg>
+                        <p className="inline-flex gap-2">
+                          image.png{" "}
+                          <span className="text-zinc-500 text-sm">21MB</span>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="inline-flex pt-2 items-center text-sm gap-2">
+                    <div
+                      className={`flex justify-center w-20 aspect-square hover:cursor-pointer items-center rounded gap-1 h-7 font-sm font-light bg-zinc-800 text-zinc-500 hover:bg-zinc-950`}
+                    >
+                      <div className="inline-flex gap-1 items-center">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-5 rotate-180"
+                          viewBox="0 0 24 24"
+                        >
+                          <g
+                            fill="none"
+                            stroke="currentColor"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="1.5"
+                            color="currentColor"
+                          >
+                            <path d="M13 6H8.5a4.5 4.5 0 0 0 0 9H20" />
+                            <path d="M17 12s3 2.21 3 3s-3 3-3 3" />
+                          </g>
+                        </svg>
+                        <p>Reply</p>
+                      </div>
+                    </div>
+                    <div
+                      className={`flex justify-center w-24 aspect-square hover:cursor-pointer items-center rounded gap-1 h-7 font-sm font-light bg-zinc-800 text-zinc-500 hover:bg-zinc-950`}
+                    >
+                      <div className="inline-flex gap-1 items-center">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-5 "
+                          viewBox="0 0 24 24"
+                        >
+                          <g
+                            fill="none"
+                            stroke="currentColor"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                          >
+                            <path
+                              strokeDasharray="16"
+                              strokeDashoffset="16"
+                              d="M5 12h13.5"
+                            >
+                              <animate
+                                fill="freeze"
+                                attributeName="strokeDashoffset"
+                                dur="0.2s"
+                                values="16;0"
+                              />
+                            </path>
+                            <path
+                              strokeDasharray="10"
+                              strokeDashoffset="10"
+                              d="M19 12l-5 5M19 12l-5 -5"
+                            >
+                              <animate
+                                fill="freeze"
+                                attributeName="strokeDashoffset"
+                                begin="0.2s"
+                                dur="0.2s"
+                                values="10;0"
+                              />
+                            </path>
+                          </g>
+                        </svg>
+                        <p>Forward</p>
+                      </div>
+                    </div>
+                  </div> */}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </main>
+      {showModal && (
+        <EmailModal
+          onClose={() => setShowModal(false)}
+          onSend={handleModalSend}
+        />
+      )}
+    </>
   );
 }
 

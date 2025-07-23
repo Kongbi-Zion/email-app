@@ -19,78 +19,11 @@
     "unauthenticated_identities_enabled": true
   },
   "data": {
-    "url": "https://f4rqkbxq3zfr5jlio5emhxgrvu.appsync-api.us-east-2.amazonaws.com/graphql",
+    "url": "https://vura2kexgbeitbcl6tkq2b6cgy.appsync-api.us-east-2.amazonaws.com/graphql",
     "aws_region": "us-east-2",
-    "api_key": "da2-ikfg2lnyszhwtikbneaoimtkfu",
+    "api_key": "da2-znkb2znlfrfkveja3ffvwp3s7u",
     "default_authorization_type": "API_KEY",
-    "authorization_types": ["AMAZON_COGNITO_USER_POOLS", "AWS_IAM"],
-    "model_introspection": {
-      "version": 1,
-      "models": {
-        "Todo": {
-          "name": "Todo",
-          "fields": {
-            "id": {
-              "name": "id",
-              "isArray": false,
-              "type": "ID",
-              "isRequired": true,
-              "attributes": []
-            },
-            "content": {
-              "name": "content",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "createdAt": {
-              "name": "createdAt",
-              "isArray": false,
-              "type": "AWSDateTime",
-              "isRequired": false,
-              "attributes": [],
-              "isReadOnly": true
-            },
-            "updatedAt": {
-              "name": "updatedAt",
-              "isArray": false,
-              "type": "AWSDateTime",
-              "isRequired": false,
-              "attributes": [],
-              "isReadOnly": true
-            }
-          },
-          "syncable": true,
-          "pluralName": "Todos",
-          "attributes": [
-            {
-              "type": "model",
-              "properties": {}
-            },
-            {
-              "type": "auth",
-              "properties": {
-                "rules": [
-                  {
-                    "allow": "public",
-                    "provider": "apiKey",
-                    "operations": ["create", "update", "delete", "read"]
-                  }
-                ]
-              }
-            }
-          ],
-          "primaryKeyInfo": {
-            "isCustomPrimaryKey": false,
-            "primaryKeyFieldName": "id",
-            "sortKeyFieldNames": []
-          }
-        }
-      },
-      "enums": {},
-      "nonModels": {}
-    }
+    "authorization_types": ["AMAZON_COGNITO_USER_POOLS", "AWS_IAM","API_KEY"]
   },
   "version": "1.3"
 }
