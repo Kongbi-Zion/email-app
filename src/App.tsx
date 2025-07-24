@@ -594,6 +594,10 @@ function EmailModal({ onClose, onSend }: EmailModalProps) {
   );
 }
 
+const customStyle: React.CSSProperties & Record<string, string> = {
+  "--media-secondary-color": "#27272a",
+};
+
 function App() {
   const [leftMenuChip, setLeftMenuChip] = useState<string>("B");
   const [selected, setSelected] = useState<string>("Inbox");
@@ -1442,12 +1446,7 @@ function App() {
 
                     {email.aiInsights?.summaryAudioUrl && (
                       <div className="px-1 py-3">
-                        <MediaThemeSutroAudio
-                          style={{
-                            "--media-secondary-color": "#27272a",
-                            width: "100%",
-                          }}
-                        >
+                        <MediaThemeSutroAudio style={customStyle}>
                           <audio
                             slot="media"
                             src={email.aiInsights.summaryAudioUrl}
