@@ -322,159 +322,6 @@ const categoryList2 = [
   },
 ];
 
-const pinnedList = [
-  {
-    id: 1,
-    image: "https://flowbite.com/docs/images/people/profile-picture-5.jpg",
-    date: "Mar 29",
-    active: false,
-    names: ["Ali from Baked"],
-    subject: "New design review",
-    actions: [3],
-    messageCount: 9,
-  },
-  {
-    id: 4,
-    image:
-      "https://upload.wikimedia.org/wikipedia/commons/0/08/Netflix_2015_logo.svg",
-    date: "Jul 21",
-    active: true,
-    names: ["Netflix Support"],
-    subject: "New feature rollout",
-    actions: [3],
-    messageCount: 5,
-  },
-  {
-    id: 5,
-    image: "https://avatars.githubusercontent.com/u/9919?s=200&v=4", // GitHub
-    date: "Jul 20",
-    active: false,
-    names: ["GitHub Bot"],
-    subject: "Security scan completed",
-    actions: [1, 2],
-    messageCount: 3,
-  },
-  {
-    id: 6,
-    image: "https://stripe.com/img/v3/home/twitter.png", // Stripe
-    date: "Jul 19",
-    active: true,
-    names: ["Stripe"],
-    subject: "Invoice payment failed",
-    actions: [2, 3],
-    messageCount: 2,
-  },
-];
-
-const primaryList = [
-  {
-    id: 9,
-    image: "https://flowbite.com/docs/images/people/profile-picture-5.jpg",
-    date: "Mar 28",
-    active: true,
-    names: ["Ali"],
-    subject: "Security alert: Critical vulnerability",
-    actions: [1, 2, 3],
-    messageCount: 8,
-  },
-  {
-    id: 10,
-    image:
-      "https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg",
-    date: "Jul 18",
-    active: true,
-    names: ["Amazon Support"],
-    subject: "Your AWS bill is ready",
-    actions: [1],
-    messageCount: 10,
-  },
-  {
-    id: 11,
-    image:
-      "https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg",
-    date: "Jul 17",
-    active: false,
-    names: ["Microsoft Teams"],
-    subject: "Weekly sync reminder",
-    actions: [3],
-    messageCount: 1,
-  },
-  {
-    id: 12,
-    image:
-      "https://upload.wikimedia.org/wikipedia/commons/5/51/Facebook_f_logo_%282019%29.svg",
-    date: "Jul 16",
-    active: true,
-    names: ["Meta Security"],
-    subject: "Account sign-in attempt",
-    actions: [1],
-    messageCount: 2,
-  },
-  {
-    id: 13,
-    image: "https://logo.clearbit.com/paypal.com", // Replaced PayPal SVG
-    date: "Jul 15",
-    active: true,
-    names: ["PayPal"],
-    subject: "Transaction receipt",
-    actions: [2],
-    messageCount: 4,
-  },
-  {
-    id: 14,
-    image: "https://logo.clearbit.com/google.com", // Google logo via Clearbit
-    date: "Jul 14",
-    active: false,
-    names: ["Google Workspace"],
-    subject: "Shared document updated",
-    actions: [3],
-    messageCount: 7,
-  },
-  {
-    id: 15,
-    image: "https://logo.clearbit.com/twitter.com", // Twitter logo
-    date: "Jul 13",
-    active: false,
-    names: ["Twitter Notifications"],
-    subject: "New login from iPhone",
-    actions: [1, 3],
-    messageCount: 6,
-  },
-  {
-    id: 16,
-    image: "https://logo.clearbit.com/slack.com", // Slack logo
-    date: "Jul 12",
-    active: true,
-    names: ["Slack Channel"],
-    subject: "New message in #design",
-    actions: [3],
-    messageCount: 11,
-  },
-
-  {
-    id: 17,
-    image:
-      "https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg",
-    date: "Jul 11",
-    active: false,
-    names: ["Apple ID"],
-    subject: "Apple ID changed",
-    actions: [1],
-    messageCount: 1,
-  },
-  {
-    id: 18,
-    image:
-      "https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png",
-    date: "Jul 10",
-    active: false,
-    names: ["Instagram"],
-    subject: "2FA Code: 123456",
-    actions: [2],
-    messageCount: 3,
-  },
-];
-
 interface List {
   icon: JSX.Element;
   label: string;
@@ -484,17 +331,6 @@ interface List {
 interface ListCats {
   icon: JSX.Element;
   label: string;
-}
-
-interface ListUser {
-  id: number;
-  image: string;
-  date: string;
-  active: boolean;
-  names: string[];
-  subject: string;
-  actions: number[];
-  messageCount: number;
 }
 
 const listEmails = `
@@ -602,7 +438,9 @@ function App() {
   const [leftMenuChip, setLeftMenuChip] = useState<string>("B");
   const [selected, setSelected] = useState<string>("Inbox");
   const [selectedCat, setSelectedCat] = useState<string>("Primary");
-  const [selectedUser, setSelectedUser] = useState<number>(1);
+  const [selectedUser, setSelectedUser] = useState<string>(
+    "<CACpyjMdrEBU6f9OgtunmNGuCVXKZ3N9OhUSjSqwdiKMJDjPATg@mail.gmail.com>-0"
+  );
   const [showManag, setShowManag] = useState<boolean>(false);
   const [openSummaries, setOpenSummaries] = useState<Record<string, boolean>>(
     {}
@@ -611,8 +449,6 @@ function App() {
   const [management] = useState<List[]>(managementList);
   const [bottom] = useState<List[]>(bottomList);
   const [categories] = useState<ListCats[]>(categoryList);
-  const [pinned] = useState<ListUser[]>(pinnedList);
-  const [primary] = useState<ListUser[]>(primaryList);
   const [showModal, setShowModal] = useState(false);
   const [emails, setEmails] = useState<Email[]>([]);
   const [loading, setLoading] = useState(true);
@@ -632,24 +468,35 @@ function App() {
       console.log("items: ", items);
 
       // Fetch audio for each email
-      const fetchAudioForEmail = async (email: Email) => {
-        if (email.aiInsights?.summaryAudioUrl) {
+      const fetchAudioForEmail = async (email: Email, index: number) => {
+        let updatedEmail = { ...email };
+
+        // Append -${index} to messageId if it exists
+        if (updatedEmail.messageId) {
+          updatedEmail.messageId = `${updatedEmail.messageId}-${index}`;
+        }
+
+        // Handle audio URL signing
+        if (updatedEmail.aiInsights?.summaryAudioUrl) {
           try {
-            let s3Key = email.aiInsights.summaryAudioUrl;
+            let s3Key = updatedEmail.aiInsights.summaryAudioUrl;
             s3Key = s3Key.split("/").pop() || s3Key;
+
             const { url } = await getUrl({ path: `audio/${s3Key}` });
-            return {
-              ...email,
+
+            updatedEmail = {
+              ...updatedEmail,
               aiInsights: {
-                ...email.aiInsights,
+                ...updatedEmail.aiInsights,
                 summaryAudioUrl: url.toString(), // Use signed URL
               },
             };
           } catch (err) {
-            return email; // fallback to original
+            return updatedEmail; // fallback to original
           }
         }
-        return email;
+
+        return updatedEmail;
       };
 
       const itemsWithAudio = await Promise.all(items.map(fetchAudioForEmail));
@@ -1019,54 +866,84 @@ function App() {
             </div>
 
             <div className="mt-8">
-              <p className="text-zinc-600">Pinned [{pinned.length}]</p>
+              {!loading && (
+                <p className="text-zinc-600">Primary [{emails.length}]</p>
+              )}
+
+              {loading && (
+                <div className="flex justify-center items-center py-10">
+                  <svg
+                    className="animate-spin h-6 w-6 text-zinc-500"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8v8z"
+                    ></path>
+                  </svg>
+                </div>
+              )}
               <div className="w-full space-y-3 mt-3.5 text-sm">
-                {pinned.map((item) => (
+                {emails.map((email) => (
                   <div
                     className={`${
-                      selectedUser === item.id && "bg-zinc-800"
+                      selectedUser === email.messageId && "bg-zinc-800"
                     } w-full inline-flex text-sm gap-3 hover:cursor-pointer hover:bg-zinc-800 rounded-md p-2.5`}
-                    onClick={() => setSelectedUser(item.id)}
+                    onClick={() => setSelectedUser(email.messageId as string)}
                   >
                     <div className="relative">
                       <img
                         className="min-w-10 min-h-10 w-10 h-10 max-w-10 max-h-10 rounded-full"
-                        src={item.image}
+                        src={
+                          "https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_640.png"
+                        }
                         alt=""
                       />
-                      {item.active && (
+                      {true && (
                         <span className="bottom-0 left-7 absolute  w-3.5 h-3.5 bg-blue-400 border-2 border-white dark:border-gray-800 rounded-full"></span>
                       )}
                     </div>
                     <div className="w-full">
                       <div className="w-full inline-flex items-center justify-between">
-                        <div>
-                          {item.names.map((name, index) => (
-                            <span key={index}>
-                              {name}
-                              {index < pinnedList[0].names.length - 1
-                                ? ", "
-                                : ""}
-                            </span>
-                          ))}
-                          {item.messageCount > 1 && (
-                            <span className="pl-1 text-zinc-600">
-                              [{item.messageCount}]
-                            </span>
-                          )}
+                        <div className="truncate max-w-[210px] overflow-hidden whitespace-nowrap">
+                          {(email.aiInsights?.entities ?? [])
+                            .slice(0, 2)
+                            .map((name, index, arr) => (
+                              <span key={index}>
+                                {name}
+                                {index < arr.length - 1 ? ", " : ""}
+                              </span>
+                            ))}
                         </div>
-                        <div className="text-zinc-600">{item.date}</div>
+                        <div className="text-zinc-600">
+                          {new Date(email.date as string).toDateString()}
+                        </div>
                       </div>
                       <div className="w-ful text-zinc-600 pt-1 flex gap-5 items-center justify-between">
                         <div
                           className="truncate max-w-[210px] overflow-hidden whitespace-nowrap"
-                          title={item.subject}
+                          title={email.subject as string}
                         >
-                          {item.subject}
+                          {email.subject}
                         </div>
 
                         <div className="inline-flex justify-center gap-1 items-center wrap-normal">
-                          {item.actions.map((action) => (
+                          {[
+                            3,
+                            2,
+                            ...(email?.aiInsights?.is_urgent ? [1] : []),
+                          ].map((action) => (
                             <div>
                               {action === 1 && (
                                 <svg
@@ -1115,7 +992,7 @@ function App() {
               </div>
             </div>
 
-            <div className="mt-5">
+            {/* <div className="mt-5">
               <p className="text-zinc-600">Primary [{primary.length}]</p>
               <div className="w-full space-y-3 mt-3.5 text-sm">
                 {primary.map((item) => (
@@ -1210,7 +1087,7 @@ function App() {
                   </div>
                 ))}
               </div>
-            </div>
+            </div> */}
           </div>
         </div>
         <div className="bg-zinc-900 rounded-lg h-full w-full border border-zinc-800 overflow-y-auto hide-scrollbar">
@@ -1338,29 +1215,6 @@ function App() {
           </div>
 
           <div className="w-full p-4">
-            {/* <div>
-              <div>
-                <p>
-                  Re: Design review feedback{" "}
-                  <span className="text-zinc-700">[5]</span>
-                </p>
-              </div>
-              <p className="font-light pt-2 inline-flex items-center gap-1 text-sm text-zinc-600">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-4"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    fill="currentColor"
-                    d="M5 22q-.825 0-1.412-.587T3 20V6q0-.825.588-1.412T5 4h1V2h2v2h8V2h2v2h1q.825 0 1.413.588T21 6v14q0 .825-.587 1.413T19 22zm0-2h14V10H5z"
-                  />
-                </svg>{" "}
-                March 25 - March 29
-              </p>
-
-            </div> */}
-
             <div className="w-full space-y-5">
               {loading && (
                 <div className="flex justify-center items-center py-10">
@@ -1387,28 +1241,86 @@ function App() {
                 </div>
               )}
               {emails.map((email) => (
-                <div className="space-y-4 pt-5">
+                <div
+                  className={`space-y-4 ${email.messageId === selectedUser ? "block" : "hidden"}`}
+                >
                   <div
                     className={`w-full inline-flex text-sm gap-3 hover:cursor-pointer hover:bg-zinc-800 rounded-md`}
                   >
                     <div className="relative">
                       <img
                         className="min-w-10 min-h-10 w-10 h-10 max-w-10 max-h-10 rounded-full"
-                        src={"https://stripe.com/img/v3/home/twitter.png"}
+                        src={
+                          "https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_640.png"
+                        }
                         alt=""
                       />
                     </div>
                     <div className="w-full">
                       <div className="w-full inline-flex items-center justify-between">
                         <div>{email.from}</div>
-                        <div className="text-zinc-600">March 25, 105AM</div>
+                        <div className="text-zinc-600">
+                          {new Date(email.date as string).toDateString()}
+                        </div>
                       </div>
                       <div className="w-ful text-zinc-600 pt-1 flex gap-5 items-center justify-between">
                         <div className="truncate max-w-[210px] overflow-hidden whitespace-nowrap">
-                          To: {email.to}
+                          From: {email.from}
                         </div>
                       </div>
                     </div>
+                  </div>
+
+                  <div>
+                    <div>
+                      <p>
+                        {email.subject} -
+                        <span className="pl-2 text-purple-700">{`[${email.aiInsights?.category}]`}</span>
+                      </p>
+                    </div>
+                    <p className="font-light pt-3 inline-flex items-center gap-1 text-sm text-zinc-600">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-4"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          fill="currentColor"
+                          d="M5 22q-.825 0-1.412-.587T3 20V6q0-.825.588-1.412T5 4h1V2h2v2h8V2h2v2h1q.825 0 1.413.588T21 6v14q0 .825-.587 1.413T19 22zm0-2h14V10H5z"
+                        />
+                      </svg>
+                      {email.date}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-3">
+                    {(email.aiInsights?.entities ?? []).map((name, index) => (
+                      <>
+                        <div
+                          key={index}
+                          className="inline-flex items-center gap-1 text-sm"
+                        >
+                          <img
+                            className="min-w-5 min-h-5 w-7 h-5 max-w-5 max-h-5 rounded-full"
+                            src={
+                              "https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_640.png"
+                            }
+                            alt=""
+                          />
+
+                          <div className="text-sm">{name}</div>
+                        </div>
+                      </>
+                    ))}
+                  </div>
+                  <div>
+                    <p>
+                      {" "}
+                      Sentiment:{" "}
+                      <span className="text-purple-600">
+                        {email.aiInsights?.sentiment}
+                      </span>
+                    </p>
                   </div>
                   <div className="border border-purple-600 my-5 rounded-lg p-1">
                     <div className="p-2">
@@ -1436,31 +1348,33 @@ function App() {
                         </svg>
                       </div>
                       {openSummaries[email.messageId as string] && (
-                        <div className="overflow-hidden">
-                          <p className="text-zinc-300 font-light text-sm pt-2">
-                            {email.aiInsights?.summary}
-                          </p>
-                        </div>
+                        <>
+                          <div className="overflow-hidden">
+                            <p className="text-zinc-300 font-light text-sm pt-2">
+                              {email.aiInsights?.summary}
+                            </p>
+                          </div>
+
+                          {email.aiInsights?.summaryAudioUrl && (
+                            <div className="px-1 py-3">
+                              <MediaThemeSutroAudio style={customStyle}>
+                                <audio
+                                  slot="media"
+                                  src={email.aiInsights.summaryAudioUrl}
+                                  playsInline
+                                  crossOrigin="anonymous"
+                                ></audio>
+                              </MediaThemeSutroAudio>
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
-
-                    {email.aiInsights?.summaryAudioUrl && (
-                      <div className="px-1 py-3">
-                        <MediaThemeSutroAudio style={customStyle}>
-                          <audio
-                            slot="media"
-                            src={email.aiInsights.summaryAudioUrl}
-                            playsInline
-                            crossOrigin="anonymous"
-                          ></audio>
-                        </MediaThemeSutroAudio>
-                      </div>
-                    )}
                   </div>
 
                   {email.htmlBody ? (
                     <div
-                      className="text-sm font-light px-4 [&_*]:!bg-zinc-900 [&_*]:!text-zinc-400"
+                      className="text-sm font-light -mt-5 px-4 [&_*]:!bg-zinc-900 [&_*]:!text-zinc-400"
                       dangerouslySetInnerHTML={{ __html: email.htmlBody }}
                     />
                   ) : (
