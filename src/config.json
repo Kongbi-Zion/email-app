@@ -23,7 +23,18 @@
     "aws_region": "us-east-2",
     "api_key": "da2-znkb2znlfrfkveja3ffvwp3s7u",
     "default_authorization_type": "API_KEY",
-    "authorization_types": ["AMAZON_COGNITO_USER_POOLS", "AWS_IAM","API_KEY"]
+    "authorization_types": ["AMAZON_COGNITO_USER_POOLS", "AWS_IAM", "API_KEY"]
+  },
+  "storage": {
+    "aws_region": "us-east-2",
+    "bucket_name": "132260253285-us-east-2-email-bucket",
+    "buckets": [
+      {
+        "name": "132260253285-us-east-2-email-bucket",
+        "bucket_name": "132260253285-us-east-2-email-bucket",
+        "aws_region": "us-east-2"
+      }
+    ]
   },
   "version": "1.3"
 }

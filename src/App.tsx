@@ -4,8 +4,9 @@ import { generateClient } from "aws-amplify/data";
 import { onNewEmail } from "./graphql/subscriptions";
 import { SendEmailInput } from "./API";
 import { sendEmail } from "./graphql/mutations";
-import MediaThemeTailwindAudio from 'player.style/tailwind-audio/react';
+import MediaThemeSutroAudio from "player.style/sutro-audio/react";
 import type { Email } from "./API";
+import { getUrl } from "aws-amplify/storage";
 
 const client = generateClient<Schema>();
 
@@ -599,7 +600,9 @@ function App() {
   const [selectedCat, setSelectedCat] = useState<string>("Primary");
   const [selectedUser, setSelectedUser] = useState<number>(1);
   const [showManag, setShowManag] = useState<boolean>(false);
-  const [showSummary, setShowSummary] = useState<boolean>(false);
+  const [openSummaries, setOpenSummaries] = useState<Record<string, boolean>>(
+    {}
+  );
   const [core] = useState<List[]>(coreList);
   const [management] = useState<List[]>(managementList);
   const [bottom] = useState<List[]>(bottomList);
@@ -617,10 +620,36 @@ function App() {
         query: listEmails,
         variables: { emailId: "rosius@846agents.com" },
       });
+
       const items =
         (result as { data?: { listEmails?: { items?: Email[] } } }).data
           ?.listEmails?.items ?? [];
-      setEmails(items);
+
+      console.log("items: ", items);
+
+      // Fetch audio for each email
+      const fetchAudioForEmail = async (email: Email) => {
+        if (email.aiInsights?.summaryAudioUrl) {
+          try {
+            let s3Key = email.aiInsights.summaryAudioUrl;
+            s3Key = s3Key.split("/").pop() || s3Key;
+            const { url } = await getUrl({ path: `audio/${s3Key}` });
+            return {
+              ...email,
+              aiInsights: {
+                ...email.aiInsights,
+                summaryAudioUrl: url.toString(), // Use signed URL
+              },
+            };
+          } catch (err) {
+            return email; // fallback to original
+          }
+        }
+        return email;
+      };
+
+      const itemsWithAudio = await Promise.all(items.map(fetchAudioForEmail));
+      setEmails(itemsWithAudio);
     } catch (error) {
       console.error("❌ Error fetching emails:", error);
     } finally {
@@ -656,6 +685,13 @@ function App() {
       console.log("❌ Error sending email:", error);
       return { success: false, error };
     }
+  };
+
+  const toggleSummary = (id: string | number) => {
+    setOpenSummaries((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
   };
 
   const handleModalSend = async ({
@@ -1374,14 +1410,15 @@ function App() {
                     <div className="p-2">
                       <div
                         className="inline-flex text-sm gap-2 hover:cursor-pointer items-center text-zinc-600"
-                        onClick={() => setShowSummary((prev) => !prev)}
+                        onClick={() => toggleSummary(email.messageId as string)}
                       >
                         <p className="">AI Summary</p>
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
                           viewBox="0 0 24 24"
                           className={`${
-                            !showSummary && "rotate-180"
+                            !openSummaries[email.messageId as string] &&
+                            "rotate-180"
                           } h-5 transition-all ease-in-out duration-300`}
                         >
                           <path
@@ -1394,34 +1431,41 @@ function App() {
                           />
                         </svg>
                       </div>
-                      <div className="overflow-hidden ">
-                        <p className="text-zinc-300 font-light text-sm pt-2">
-                          {email.aiInsights?.summary}
-                        </p>
-                      </div>
+                      {openSummaries[email.messageId as string] && (
+                        <div className="overflow-hidden">
+                          <p className="text-zinc-300 font-light text-sm pt-2">
+                            {email.aiInsights?.summary}
+                          </p>
+                        </div>
+                      )}
                     </div>
+
+                    {email.aiInsights?.summaryAudioUrl && (
+                      <div className="px-1 py-3">
+                        <MediaThemeSutroAudio
+                          style={{
+                            "--media-secondary-color": "#27272a",
+                            width: "100%",
+                          }}
+                        >
+                          <audio
+                            slot="media"
+                            src={email.aiInsights.summaryAudioUrl}
+                            playsInline
+                            crossOrigin="anonymous"
+                          ></audio>
+                        </MediaThemeSutroAudio>
+                      </div>
+                    )}
                   </div>
-                  {/* Render audio player if available */}
-                  {email.aiInsights?.summaryAudioUrl && (
-                    <MediaThemeTailwindAudio style={{width: "100%"}}>
-                      <audio
-                        slot="media"
-                        src="https://132260253285-us-east-2-email-bucket.s3.us-east-2.amazonaws.com/audio/721ee9ed-51d5-40fb-a154-10a40fa1e003.mp3"
-                        playsInline
-                        crossOrigin="anonymous"
-                      ></audio>
-                    </MediaThemeTailwindAudio>
-                  )}
 
                   {email.htmlBody ? (
                     <div
-                      className="text-sm font-light text-zinc-100!"
+                      className="text-sm font-light px-4 [&_*]:!bg-zinc-900 [&_*]:!text-zinc-400"
                       dangerouslySetInnerHTML={{ __html: email.htmlBody }}
                     />
                   ) : (
-                    <p className="text-sm font-light text-zinc-100!">
-                      {email.plainBody}
-                    </p>
+                    <p className="text-sm font-light ">{email.plainBody}</p>
                   )}
 
                   {/* <div className="flex pt-2 items-center text-sm mb-3 gap-2">
