@@ -752,7 +752,7 @@ function App() {
             </div>
           </div>
         </div>
-        <div className="bg-zinc-900 rounded-lg h-full w-full max-w-sm border border-zinc-800 overflow-y-auto hide-scrollbar">
+        <div className="bg-zinc-900 rounded-lg h-full w-full max-w-sm border border-zinc-800 overflow-hidden">
           <div className="border-b border-zinc-800 h-14 flex items-center justify-between px-4 font-light text-sm">
             <div>
               <div className="inline-flex gap-2 items-center ">
@@ -812,7 +812,7 @@ function App() {
               </div>
             </div>
           </div>
-          <div className="w-full p-4 h-full">
+          <div className="w-full p-4 h-full  overflow-y-auto hide-scrollbar pb-20">
             <form className="max-w-md mx-auto">
               <div className="relative">
                 <div className="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
@@ -1090,7 +1090,7 @@ function App() {
             </div> */}
           </div>
         </div>
-        <div className="bg-zinc-900 rounded-lg h-full w-full border border-zinc-800 overflow-y-auto hide-scrollbar">
+        <div className="bg-zinc-900 rounded-lg h-full w-full border border-zinc-800 overflow-hidden ">
           <div className="border-b border-zinc-800 h-14 flex items-center justify-between px-4 font-light text-sm">
             <div className="inline-flex items-center gap-1 text-zinc-600">
               <div>
@@ -1214,7 +1214,7 @@ function App() {
             </div>
           </div>
 
-          <div className="w-full p-4">
+          <div className="w-full h-full p-4 pt-8 overflow-y-auto hide-scrollbar pb-20">
             <div className="w-full space-y-5">
               {loading && (
                 <div className="flex justify-center items-center py-10">
